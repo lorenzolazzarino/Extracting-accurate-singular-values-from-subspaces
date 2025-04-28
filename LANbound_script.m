@@ -20,7 +20,8 @@
 % - EXPERIMENT 1: Generalized Nystrom without Oversampling
 % - EXPERIMENT 2: Generalized Nystrom with Oversampling
 % - EXPERIMENT 3: Methods Comparison
-% - EXPERIMENT 4: Computability
+% - EXPERIMENT 4: Comparison with Saibaba's bound
+% - EXPERIMENT 5: Computability
 % - FUNCTIONS: (1) Generate Approximated Subspaces, (2) Generalized Nystrom
 %              (3) Rayleigh-Ritz Method, (4) HMT Method
 %
@@ -453,7 +454,84 @@
                 saveas(gca, filename, 'jpeg');
         end
 
-%% EXPERIMENT 4: COMPUTABILITY
+%% EXPERIMENT 4: COMPARISON WITH SAIBABA'S BOUND
+% In this experiment, we compare the bound for HMT derived in the paper
+% with Saibaba' relative bound. We use A_alg. We compare for the cases:
+% 1. tV from Gaussian subject to one power iteration
+% 2. tV randomly generated
+   
+r = 200;    % Column Size of approximate singular subspaces
+q = 0;      % Exponential in subspace iteration for Saibaba
+
+% 1. tV from Gaussian subject to one power iteration ---------------
+
+        % HMT method
+        svHMT_alg = HMT(A_alg,tV_alg);
+        [BoundHMT_alg, WeylHMT_alg] = LANbound(A_alg,D_alg,tV_alg);
+        sib_bound_alg = saibaba_bound(Vex,D_alg,r,tV_alg,q);
+            
+        % Plot 
+        for i =1:r
+        rel_err_alg(i) = abs(D_alg(i)-svHMT_alg(i))/abs(D_alg(i));
+        rel_BoundHMT_alg(i) = BoundHMT_alg(i)/D_alg(i);
+        end
+            figure()    % No oversample for every method
+        
+                % HMT
+                semilogy(rel_err_alg,'k.',MS,ms1)
+                hold on
+                grid on
+                semilogy(rel_BoundHMT_alg,'g--',MS,ms1,LW,lw1)
+                semilogy(sib_bound_alg,'r-',MS,ms1,LW,lw1)
+        
+                legend('$|\sigma_i - \sigma_i^{HMT}|/|\sigma_i|$',...
+                    'Bound for HMT', 'Saibaba bound',FS,fs1,IN,in)
+                title('$\tilde{V}$ from Gaussian subject to one power iteration',IN,in)
+                xlabel('$i$',FS,fs,IN,in); set(gca,FS,fs);
+        
+                % Save subplot (if specified)
+                if save_plot == 1
+                        filename = sprintf('Figures/Comparison_alg_%d.jpg',save_number);
+                        % Save subplot as JPEG
+                        saveas(gca, filename, 'jpeg');
+                end
+
+% 2. tV randomly generated ----------------------------------------
+    
+        [tV_alg_rand,~] = qr(randn(m,r),0); % Corresponding to tV
+        
+        
+        % HMT method
+        svHMT_alg_rand = HMT(A_alg,tV_alg_rand);
+        [BoundHMT_alg_rand, WeylHMT_alg_rand] = LANbound(A_alg,D_alg,tV_alg_rand);
+        sib_bound_alg_rand = saibaba_bound(Vex,D_alg,r,tV_alg_rand,q);
+            
+        % Plot 
+        for i =1:r
+        rel_err_alg_rand(i) = abs(D_alg(i)-svHMT_alg_rand(i))/abs(D_alg(i));
+        rel_BoundHMT_alg_rand(i) = BoundHMT_alg_rand(i)/D_alg(i);
+        end
+            figure()    % No oversample for every method
+        
+                % HMT
+                semilogy(rel_err_alg_rand,'k.',MS,ms1)
+                hold on
+                grid on
+                semilogy(rel_BoundHMT_alg_rand,'g--',MS,ms1,LW,lw1)
+                semilogy(sib_bound_alg_rand,'r-',MS,ms1,LW,lw1)
+        
+                legend('$|\sigma_i - \sigma_i^{HMT}|/|\sigma_i|$',...
+                    'Bound for HMT', 'Saibaba bound',FS,fs1,IN,in)
+                title('$\tilde{V}$ randomly generated',IN,in)
+                xlabel('$i$',FS,fs,IN,in); set(gca,FS,fs);
+        
+                % Save subplot (if specified)
+                if save_plot == 1
+                        filename = sprintf('Figures/Comparison_alg_%d.jpg',save_number);
+                        % Save subplot as JPEG
+                        saveas(gca, filename, 'jpeg');
+                end
+%% EXPERIMENT 5: COMPUTABILITY
 % In this experiment, we explore the computability of the bound by comparing
 % the Backward bounds for the Generalized Nystrom Approximation with the
 % forward bounds computed above. We do it for both decays and
@@ -697,7 +775,20 @@
         svHMT = svd(AHMT);
     
     end
-    
-    
-    
 
+%------------------------- Saibaba Bound
+    function sib_bound = saibaba_bound(Vex,singval,r,tV,q)
+        Omega= Vex'*tV;
+        Omega1 = Omega(1:r,:);
+        Omega2 = Omega(r+1:end,:);
+        [~,R] = qr(Omega1,0);
+        P = Omega2/R;
+        normPs = norm(P)^2;
+        espo = (4*q)+2;
+        for j=1:r
+            gamma = singval(r+1)/singval(j);
+            Den = 1 + (gamma^espo)*normPs;
+            sib_bound(j) = 1/sqrt(Den);
+            sib_bound(j) = 1-sib_bound(j);
+        end
+    end
